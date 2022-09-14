@@ -13,7 +13,10 @@ import {NativeControlsManager} from './src/side_effects/NativeControlsManager';
 queueManager.addListener(audioManager);
 
 const audioLogging = new AudioLoggingManager();
-const nativeControlsManager = new NativeControlsManager(audioManager);
+const nativeControlsManager = new NativeControlsManager(
+  audioManager,
+  queueManager,
+);
 
 audioManager.addListener(audioLogging);
 audioManager.addListener(nativeControlsManager);
