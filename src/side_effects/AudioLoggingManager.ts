@@ -1,25 +1,29 @@
-import {AudioManagerListener} from 'src/AudioManagerListener';
-import {QueueManagerListener} from 'src/QueueManagerListener';
-import {AVPlayerProgress} from 'src/types/AVPlayerProgress';
-import {AVPlayerStatus} from 'src/types/AVPlayerStatus';
-import {PlaybackSpeed} from 'src/types/PlaybackSpeed';
-import {PlaybackStatus} from 'src/types/PlaybackStatus';
+import {AudioManagerListener} from '../AudioManagerListener';
+import {QueueManagerListener} from '../QueueManagerListener';
+import {AVPlayerProgress} from '../types/AVPlayerProgress';
+import {AVPlayerStatus} from '../types/AVPlayerStatus';
+import {PlaybackSpeed} from '../types/PlaybackSpeed';
+import {PlaybackStatus} from '../types/PlaybackStatus';
+import {AudioQueue} from '../types/AudioQueue';
 
-class NativeControlsManager
+export class AudioLoggingManager
   implements AudioManagerListener, QueueManagerListener
 {
   onProgressUpdated(progress: AVPlayerProgress): void {
-    console.log('onProgressUpdated');
+    console.log('onProgressUpdated', {progress});
   }
   onStateUpdated(
     playerStatus: AVPlayerStatus,
     speed: PlaybackSpeed,
     status: PlaybackStatus,
   ): void {
-    console.log('onProgressUpdated');
+    console.log('onProgressUpdated', {
+      playerStatus,
+      speed,
+      status,
+    });
   }
-  onQueueUpdated(queue: object): void {
-    console.log('onProgressUpdated');
-    throw new Error('Method not implemented.');
+  onQueueUpdated(queue: AudioQueue): void {
+    console.log('onQueueUpdated', {queue});
   }
 }

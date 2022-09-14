@@ -1,12 +1,13 @@
-import {AudioManager, myAudioManager} from 'src/AudioManager';
-import {AudioManagerListener} from 'src/AudioManagerListener';
-import {QueueManagerListener} from 'src/QueueManagerListener';
-import {AVPlayerProgress} from 'src/types/AVPlayerProgress';
-import {AVPlayerStatus} from 'src/types/AVPlayerStatus';
-import {PlaybackSpeed} from 'src/types/PlaybackSpeed';
-import {PlaybackStatus} from 'src/types/PlaybackStatus';
+import {AudioManagerListener} from '../AudioManagerListener';
+import {QueueManagerListener} from '../QueueManagerListener';
+import {AudioManager} from '../AudioManager';
+import {AVPlayerProgress} from '../types/AVPlayerProgress';
+import {AVPlayerStatus} from '../types/AVPlayerStatus';
+import {PlaybackSpeed} from '../types/PlaybackSpeed';
+import {PlaybackStatus} from '../types/PlaybackStatus';
+import {AudioQueue} from '../types/AudioQueue';
 
-class NativeControlsManager
+export class NativeControlsManager
   implements AudioManagerListener, QueueManagerListener
 {
   constructor(private readonly myAudioManager: AudioManager) {}
@@ -20,12 +21,5 @@ class NativeControlsManager
   ): void {
     // Update native controls with status and speed
   }
-  onQueueUpdated(queue: object): void {
-    // Read currently playing track and prepare native controls
-    const onTogglePlaybackClicked = myAudioManager.togglePlayback();
-    setNativeControls(
-      onTogglePlaybackClicked,
-      //Add remainig required fields
-    );
-  }
+  onQueueUpdated(queue: AudioQueue): void {}
 }

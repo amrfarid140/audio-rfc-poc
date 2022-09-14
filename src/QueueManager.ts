@@ -53,4 +53,4 @@ class DefaultQueueManager implements QueueManager {
   }
 }
 
-export const myQueue: QueueManager = new DefaultQueueManager();
+export const queueManager: QueueManager = new DefaultQueueManager();

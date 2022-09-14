@@ -2,7 +2,6 @@ import {
   AudioManagerListener,
   AudioProgressListener,
 } from './AudioManagerListener';
-import {myQueue} from './QueueManager';
 import {QueueManagerListener} from './QueueManagerListener';
 import {AVPlayerProgress} from './types/AVPlayerProgress';
 import {AVPlayerStatus} from './types/AVPlayerStatus';
@@ -190,6 +189,4 @@ class DefaultAudioManager implements AudioManager {
   }
 }
 
-export const myAudioManager: AudioManager = new DefaultAudioManager();
-
-myQueue.addListener(myAudioManager);
+export const audioManager: AudioManager = new DefaultAudioManager();
