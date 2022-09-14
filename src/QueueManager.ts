@@ -1,6 +1,6 @@
 import {QueueManagerListener} from './QueueManagerListener';
 import {AudioQueue} from './types/AudioQueue';
-import {EventEmitter} from 'react-native';
+import {DeviceEventEmitter} from 'react-native';
 
 export interface QueueManager {
   currentState(): AudioQueue;
@@ -13,10 +13,9 @@ export interface QueueManager {
 class DefaultQueueManager implements QueueManager {
   private static readonly EVENT = 'EVENT';
   private _queue: AudioQueue = [];
-  private readonly queueEventEmitter = new EventEmitter();
   private set queue(value: AudioQueue) {
     this._queue = value;
-    this.queueEventEmitter.emit(DefaultQueueManager.EVENT, value);
+    DeviceEventEmitter.emit(DefaultQueueManager.EVENT, value);
   }
   private get queue(): AudioQueue {
     return this._queue;
@@ -41,7 +40,7 @@ class DefaultQueueManager implements QueueManager {
   }
 
   addListener(listener: QueueManagerListener): () => void {
-    const sub = this.queueEventEmitter.addListener(
+    const sub = DeviceEventEmitter.addListener(
       DefaultQueueManager.EVENT,
       listener.onQueueUpdated,
     );

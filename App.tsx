@@ -26,6 +26,10 @@ import {
   LearnMoreLinks,
   ReloadInstructions,
 } from 'react-native/Libraries/NewAppScreen';
+import {queueManager} from './src/QueueManager';
+import {audioManager} from './src/AudioManager';
+import {AudioLoggingManager} from './src/side_effects/AudioLoggingManager';
+import {NativeControlsManager} from './src/side_effects/NativeControlsManager';
 
 const Section: React.FC<
   PropsWithChildren<{
@@ -58,6 +62,20 @@ const Section: React.FC<
 };
 
 const App = () => {
+  queueManager.addListener(audioManager);
+
+  const audioLogging = new AudioLoggingManager();
+  const nativeControlsManager = new NativeControlsManager(
+    audioManager,
+    queueManager,
+  );
+
+  audioManager.addListener(audioLogging);
+  audioManager.addListener(nativeControlsManager);
+
+  queueManager.addListener(audioLogging);
+  queueManager.addListener(nativeControlsManager);
+
   const isDarkMode = useColorScheme() === 'dark';
 
   const backgroundStyle = {

@@ -8,7 +8,7 @@ import {AVPlayerStatus} from './types/AVPlayerStatus';
 import {PlaybackSpeed} from './types/PlaybackSpeed';
 import {PlaybackStatus} from './types/PlaybackStatus';
 import {TrackDirection} from './types/TrackDirection';
-import {EventEmitter} from 'react-native';
+import {DeviceEventEmitter} from 'react-native';
 import {AudioQueue} from './types/AudioQueue';
 import {Sound} from 'expo-av/build/Audio/Sound';
 import {AVPlaybackStatus, AVPlaybackStatusSuccess} from 'expo-av';
@@ -32,15 +32,17 @@ export interface AudioManager extends QueueManagerListener {
   setPlaybackSpeed: (speed: number) => Promise<void>;
 }
 
+type AudioManagerStateEvent = Omit<AudioManagerState, 'progress'> & {
+  duration: number;
+};
+
 class DefaultAudioManager implements AudioManager {
   private static readonly STATE_EVENT = 'STATE';
   private static readonly PROGRESS_EVENT = 'PROGRESS';
 
   private sound: Sound | null = null;
   private latestQueue: AudioQueue = [];
-  private lastPlaybackStatus: AudioManagerState | null = null;
-  private readonly playbackStateEventEmitter = new EventEmitter();
-  private readonly audioProgressEventEmitter = new EventEmitter();
+  private lastPlaybackStatus: AudioManagerStateEvent | null = null;
 
   async seekTo(positionMs: number): Promise<void> {
     if (this.sound) {
@@ -86,16 +88,13 @@ class DefaultAudioManager implements AudioManager {
       (status: AVPlaybackStatus) => {
         if (status.isLoaded) {
           const success = status as AVPlaybackStatusSuccess;
-          const playbackStatus = {
+          const playbackStatus: AudioManagerStateEvent = {
             playerStatus: {
               isBuffering: success.isBuffering,
               isPlaying: success.isPlaying,
               isLoading: !success.isLoaded,
             },
-            progress: {
-              durationMillis: success.durationMillis ?? 0,
-              positionMillis: success.positionMillis,
-            },
+            duration: success.durationMillis ?? 0,
             status: success.isPlaying
               ? PlaybackStatus.Play
               : PlaybackStatus.Pause,
@@ -103,14 +102,14 @@ class DefaultAudioManager implements AudioManager {
           };
           if (!isEqual(this.lastPlaybackStatus, playbackStatus)) {
             this.lastPlaybackStatus = playbackStatus;
-            this.playbackStateEventEmitter.emit(
+            DeviceEventEmitter.emit(
               DefaultAudioManager.STATE_EVENT,
               playbackStatus,
             );
           }
-          this.audioProgressEventEmitter.emit(
+          DeviceEventEmitter.emit(
             DefaultAudioManager.PROGRESS_EVENT,
-            playbackStatus.progress.positionMillis,
+            status.positionMillis,
           );
         }
       },
@@ -119,15 +118,16 @@ class DefaultAudioManager implements AudioManager {
   }
 
   addListener(listener: AudioManagerListener): () => void {
-    const subscription = this.playbackStateEventEmitter.addListener(
+    const subscription = DeviceEventEmitter.addListener(
       DefaultAudioManager.STATE_EVENT,
-      listener.onStateUpdated,
+      (event: AudioManagerStateEvent) =>
+        listener.onStateUpdated(event.playerStatus, event.speed, event.status),
     );
     return subscription.remove;
   }
 
   addProgressListener(listener: AudioProgressListener): () => void {
-    const subscription = this.audioProgressEventEmitter.addListener(
+    const subscription = DeviceEventEmitter.addListener(
       DefaultAudioManager.PROGRESS_EVENT,
       listener.onProgressUpdated,
     );
