@@ -21,6 +21,26 @@ class DefaultQueueManager implements QueueManager {
     return this._queue;
   }
 
+  constructor() {
+    this._queue = [
+      {
+        name: '3 Violins & Continuo',
+        id: '0',
+        url: 'https://www.mfiles.co.uk/mp3-downloads/pachelbel-canon-in-d.mp3',
+      },
+      {
+        name: 'Sofeggietto',
+        id: '1',
+        url: 'https://www.mfiles.co.uk/mp3-downloads/cpe-bach-solfeggietto.mp3',
+      },
+      {
+        name: 'Por Una Cabeza',
+        id: '2',
+        url: 'https://www.mfiles.co.uk/mp3-downloads/por-una-cabeza.mp3',
+      },
+    ];
+  }
+
   clearQueue(): void {
     this.queue = [];
   }
