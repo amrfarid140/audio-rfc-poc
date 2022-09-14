@@ -1,11 +1,11 @@
 import {useEffect, useMemo, useState} from 'react';
-import {myQueue} from 'src/QueueManager';
-import {QueueManagerListener} from 'src/QueueManagerListener';
-import {AudioQueue} from 'src/types/AudioQueue';
+import {AudioQueue} from '../types/AudioQueue';
+import {queueManager} from '../QueueManager';
+import {QueueManagerListener} from '../QueueManagerListener';
 
 export const useQueueManager = () => {
   const [currentAudioQueue, setAudioQueue] = useState<AudioQueue>(
-    myQueue.currentState(),
+    queueManager.currentState,
   );
   const listener: QueueManagerListener = useMemo(() => {
     return {
@@ -15,10 +15,9 @@ export const useQueueManager = () => {
     };
   }, []);
   useEffect(() => {
-    return myQueue.addListener(listener);
+    return queueManager.addListener(listener);
   }, [listener]);
   return {
     state: currentAudioQueue,
-    ...myQueue,
   };
 };

@@ -1,29 +1,22 @@
+import {AVPlayerProgress} from '../types/AVPlayerProgress';
 import {useEffect, useMemo, useState} from 'react';
-import {myAudioManager} from 'src/AudioManager';
-import {AudioManagerListener} from 'src/AudioManagerListener';
-import {AVPlayerProgress} from 'src/types/AVPlayerProgress';
-import {AVPlayerStatus} from 'src/types/AVPlayerStatus';
-import {PlaybackSpeed} from 'src/types/PlaybackSpeed';
-import {PlaybackStatus} from 'src/types/PlaybackStatus';
+import {audioManager} from '../AudioManager';
+import {AudioProgressListener} from '../AudioManagerListener';
 
-const useAudioProgress = () => {
-  const [currentAudioProgress, setAudioProgress] = useState<AVPlayerProgress>(
-    myAudioManager.currentState().progress,
-  );
-  const listener: AudioManagerListener = useMemo(() => {
+export const useAudioProgress = () => {
+  const [currentAudioProgress, setAudioProgress] = useState<AVPlayerProgress>({
+    durationMillis: 0,
+    positionMillis: 0,
+  });
+  const listener: AudioProgressListener = useMemo(() => {
     return {
       onProgressUpdated(progress: AVPlayerProgress): void {
         setAudioProgress(progress);
       },
-      onStateUpdated(
-        playerStatus: AVPlayerStatus,
-        speed: PlaybackSpeed,
-        status: PlaybackStatus,
-      ): void {},
     };
   }, []);
   useEffect(() => {
-    return myAudioManager.addListener(listener);
+    return audioManager.addProgressListener(listener);
   }, [listener]);
   return {
     progress: currentAudioProgress,
