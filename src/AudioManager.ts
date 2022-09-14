@@ -124,9 +124,7 @@ class DefaultAudioManager implements AudioManager {
       DefaultAudioManager.STATE_EVENT,
       listener.onStateUpdated,
     );
-    return () => {
-      subscription.remove();
-    };
+    return subscription.remove;
   }
 
   addProgressListener(listener: AudioProgressListener): () => void {
@@ -134,9 +132,7 @@ class DefaultAudioManager implements AudioManager {
       DefaultAudioManager.PROGRESS_EVENT,
       listener.onProgressUpdated,
     );
-    return () => {
-      subscription.remove();
-    };
+    return subscription.remove;
   }
 
   async currentState(): Promise<{
