@@ -10,6 +10,7 @@
 
 import React, {type PropsWithChildren} from 'react';
 import {
+  Pressable,
   SafeAreaView,
   ScrollView,
   StatusBar,
@@ -92,6 +93,10 @@ const App = () => {
         contentInsetAdjustmentBehavior="automatic"
         style={backgroundStyle}>
         <Header />
+        <Pressable
+          onPress={() => audioManager.togglePlayback().catch(console.error)}>
+          <Text>Play</Text>
+        </Pressable>
         <View
           style={{
             backgroundColor: isDarkMode ? Colors.black : Colors.white,

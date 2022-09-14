@@ -13,6 +13,7 @@ import {AudioQueue} from './types/AudioQueue';
 import {Sound} from 'expo-av/build/Audio/Sound';
 import {AVPlaybackStatus, AVPlaybackStatusSuccess} from 'expo-av';
 import isEqual from 'lodash.isequal';
+import { queueManager, QueueManager } from "./QueueManager";
 
 interface AudioManagerState {
   readonly playerStatus: AVPlayerStatus;
@@ -43,6 +44,10 @@ class DefaultAudioManager implements AudioManager {
   private sound: Sound | null = null;
   private latestQueue: AudioQueue = [];
   private lastPlaybackStatus: AudioManagerStateEvent | null = null;
+
+  constructor(queue: QueueManager) {
+    this.latestQueue = queue.currentState();
+  }
 
   async seekTo(positionMs: number): Promise<void> {
     if (this.sound) {
@@ -189,4 +194,4 @@ class DefaultAudioManager implements AudioManager {
   }
 }
 
-export const audioManager: AudioManager = new DefaultAudioManager();
+export const audioManager: AudioManager = new DefaultAudioManager(queueManager);
