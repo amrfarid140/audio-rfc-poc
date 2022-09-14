@@ -1,7 +1,6 @@
 import {AudioManagerListener} from '../AudioManagerListener';
 import {QueueManagerListener} from '../QueueManagerListener';
 import {AudioManager} from '../AudioManager';
-import {AVPlayerProgress} from '../types/AVPlayerProgress';
 import {AVPlayerStatus} from '../types/AVPlayerStatus';
 import {PlaybackSpeed} from '../types/PlaybackSpeed';
 import {PlaybackStatus} from '../types/PlaybackStatus';
@@ -11,9 +10,7 @@ export class NativeControlsManager
   implements AudioManagerListener, QueueManagerListener
 {
   constructor(private readonly myAudioManager: AudioManager) {}
-  onProgressUpdated(progress: AVPlayerProgress): void {
-    // Update native controls with progress
-  }
+
   onStateUpdated(
     playerStatus: AVPlayerStatus,
     speed: PlaybackSpeed,
