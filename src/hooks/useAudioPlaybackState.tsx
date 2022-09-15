@@ -31,7 +31,5 @@ export const useAudioPlayback = () => {
   useEffect(() => {
     return audioManager.addListener(listener);
   }, [listener]);
-  return {
-    state: currentAudioState,
-  };
+  return currentAudioState;
 };

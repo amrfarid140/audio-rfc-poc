@@ -8,76 +8,30 @@
  * @format
  */
 
-import React, {type PropsWithChildren} from 'react';
+import React from 'react';
 import {
   Pressable,
   SafeAreaView,
   ScrollView,
   StatusBar,
-  StyleSheet,
   Text,
   useColorScheme,
   View,
 } from 'react-native';
 
-import {
-  Colors,
-  DebugInstructions,
-  Header,
-  LearnMoreLinks,
-  ReloadInstructions,
-} from 'react-native/Libraries/NewAppScreen';
-import {queueManager} from './src/QueueManager';
+import {Colors} from 'react-native/Libraries/NewAppScreen';
 import {audioManager} from './src/AudioManager';
-import {AudioLoggingManager} from './src/side_effects/AudioLoggingManager';
-import {NativeControlsManager} from './src/side_effects/NativeControlsManager';
-
-const Section: React.FC<
-  PropsWithChildren<{
-    title: string;
-  }>
-> = ({children, title}) => {
-  const isDarkMode = useColorScheme() === 'dark';
-  return (
-    <View style={styles.sectionContainer}>
-      <Text
-        style={[
-          styles.sectionTitle,
-          {
-            color: isDarkMode ? Colors.white : Colors.black,
-          },
-        ]}>
-        {title}
-      </Text>
-      <Text
-        style={[
-          styles.sectionDescription,
-          {
-            color: isDarkMode ? Colors.light : Colors.dark,
-          },
-        ]}>
-        {children}
-      </Text>
-    </View>
-  );
-};
+import {useQueueManager} from './src/hooks/useQueueManager';
+import {useAudioProgress} from './src/hooks/useAudioProgress';
+import {useAudioPlayback} from './src/hooks/useAudioPlaybackState';
+import {queueManager} from './src/QueueManager';
+import {PlaybackStatus} from './src/types/PlaybackStatus';
 
 const App = () => {
-  queueManager.addListener(audioManager);
-
-  const audioLogging = new AudioLoggingManager();
-  const nativeControlsManager = new NativeControlsManager(
-    audioManager,
-    queueManager,
-  );
-
-  audioManager.addListener(audioLogging);
-  audioManager.addListener(nativeControlsManager);
-
-  queueManager.addListener(audioLogging);
-  queueManager.addListener(nativeControlsManager);
-
   const isDarkMode = useColorScheme() === 'dark';
+  const queue = useQueueManager();
+  const progressState = useAudioProgress();
+  const audioState = useAudioPlayback();
 
   const backgroundStyle = {
     backgroundColor: isDarkMode ? Colors.darker : Colors.lighter,
@@ -92,52 +46,28 @@ const App = () => {
       <ScrollView
         contentInsetAdjustmentBehavior="automatic"
         style={backgroundStyle}>
-        <Header />
-        <Pressable
-          onPress={() => audioManager.togglePlayback().catch(console.error)}>
-          <Text>Play</Text>
-        </Pressable>
-        <View
-          style={{
-            backgroundColor: isDarkMode ? Colors.black : Colors.white,
-          }}>
-          <Section title="Step One">
-            Edit <Text style={styles.highlight}>App.tsx</Text> to change this
-            screen and then come back to see your edits.
-          </Section>
-          <Section title="See Your Changes">
-            <ReloadInstructions />
-          </Section>
-          <Section title="Debug">
-            <DebugInstructions />
-          </Section>
-          <Section title="Learn More">
-            Read the docs to discover what to do next:
-          </Section>
-          <LearnMoreLinks />
+        <View>
+          <Text>Currently Playing: {queue?.[0]?.name}</Text>
+          <Text>Duration {progressState.durationMillis}</Text>
+          <Text>Progress {progressState.positionMillis}</Text>
+        </View>
+        <View style={{flexDirection: 'row'}}>
+          <Pressable onPress={() => queueManager.previous()}>
+            <Text>Previous</Text>
+          </Pressable>
+          <Pressable
+            onPress={() => audioManager.togglePlayback().catch(console.error)}>
+            <Text>
+              {audioState?.status === PlaybackStatus.Play ? 'Pause' : 'Play'}
+            </Text>
+          </Pressable>
+          <Pressable onPress={() => queueManager.next()}>
+            <Text>Next</Text>
+          </Pressable>
         </View>
       </ScrollView>
     </SafeAreaView>
   );
 };
-
-const styles = StyleSheet.create({
-  sectionContainer: {
-    marginTop: 32,
-    paddingHorizontal: 24,
-  },
-  sectionTitle: {
-    fontSize: 24,
-    fontWeight: '600',
-  },
-  sectionDescription: {
-    marginTop: 8,
-    fontSize: 18,
-    fontWeight: '400',
-  },
-  highlight: {
-    fontWeight: '700',
-  },
-});
 
 export default App;

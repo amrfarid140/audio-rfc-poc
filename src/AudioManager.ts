@@ -8,12 +8,12 @@ import {AVPlayerStatus} from './types/AVPlayerStatus';
 import {PlaybackSpeed} from './types/PlaybackSpeed';
 import {PlaybackStatus} from './types/PlaybackStatus';
 import {TrackDirection} from './types/TrackDirection';
-import {DeviceEventEmitter} from 'react-native';
+import EventEmitter from 'eventemitter2';
 import {AudioQueue} from './types/AudioQueue';
 import {Sound} from 'expo-av/build/Audio/Sound';
 import {AVPlaybackStatus, AVPlaybackStatusSuccess} from 'expo-av';
 import isEqual from 'lodash.isequal';
-import { queueManager, QueueManager } from "./QueueManager";
+import {queueManager, QueueManager} from './QueueManager';
 
 interface AudioManagerState {
   readonly playerStatus: AVPlayerStatus;
@@ -44,6 +44,7 @@ class DefaultAudioManager implements AudioManager {
   private sound: Sound | null = null;
   private latestQueue: AudioQueue = [];
   private lastPlaybackStatus: AudioManagerStateEvent | null = null;
+  private eventEmitter = new EventEmitter();
 
   constructor(queue: QueueManager) {
     this.latestQueue = queue.currentState();
@@ -83,60 +84,76 @@ class DefaultAudioManager implements AudioManager {
         if (successStatus.isPlaying) {
           await this.sound.pauseAsync();
           return;
+        } else {
+          await this.sound.playAsync();
         }
       }
-    }
-    const track = this.latestQueue[0];
-    const result = await Sound.createAsync(
-      {uri: track.url},
-      {shouldPlay: true},
-      (status: AVPlaybackStatus) => {
-        if (status.isLoaded) {
-          const success = status as AVPlaybackStatusSuccess;
-          const playbackStatus: AudioManagerStateEvent = {
-            playerStatus: {
-              isBuffering: success.isBuffering,
-              isPlaying: success.isPlaying,
-              isLoading: !success.isLoaded,
-            },
-            duration: success.durationMillis ?? 0,
-            status: success.isPlaying
-              ? PlaybackStatus.Play
-              : PlaybackStatus.Pause,
-            speed: success.rate,
-          };
-          if (!isEqual(this.lastPlaybackStatus, playbackStatus)) {
-            this.lastPlaybackStatus = playbackStatus;
-            DeviceEventEmitter.emit(
-              DefaultAudioManager.STATE_EVENT,
-              playbackStatus,
-            );
+    } else {
+      const track = this.latestQueue[0];
+      const result = await Sound.createAsync(
+        {uri: track.url},
+        {shouldPlay: true},
+        (status: AVPlaybackStatus) => {
+          if (status.isLoaded) {
+            const success = status as AVPlaybackStatusSuccess;
+            const playbackStatus: AudioManagerStateEvent = {
+              playerStatus: {
+                isBuffering: success.isBuffering,
+                isPlaying: success.isPlaying,
+                isLoading: !success.isLoaded,
+              },
+              duration: success.durationMillis ?? 0,
+              status: success.isPlaying
+                ? PlaybackStatus.Play
+                : PlaybackStatus.Pause,
+              speed: success.rate,
+            };
+            if (!isEqual(this.lastPlaybackStatus, playbackStatus)) {
+              this.lastPlaybackStatus = playbackStatus;
+              this.eventEmitter.emit(
+                DefaultAudioManager.STATE_EVENT,
+                playbackStatus,
+              );
+            }
+            this.eventEmitter.emit(DefaultAudioManager.PROGRESS_EVENT, <
+              AVPlayerProgress
+            >{
+              durationMillis: success.durationMillis,
+              positionMillis: success.positionMillis,
+            });
           }
-          DeviceEventEmitter.emit(
-            DefaultAudioManager.PROGRESS_EVENT,
-            status.positionMillis,
-          );
-        }
-      },
-    );
-    this.sound = result.sound;
+        },
+      );
+      this.sound = result.sound;
+      console.log('AAAA', {s: this.sound});
+    }
   }
 
   addListener(listener: AudioManagerListener): () => void {
-    const subscription = DeviceEventEmitter.addListener(
+    const subscription = this.eventEmitter.addListener(
       DefaultAudioManager.STATE_EVENT,
       (event: AudioManagerStateEvent) =>
         listener.onStateUpdated(event.playerStatus, event.speed, event.status),
     );
-    return subscription.remove;
+    return () => {
+      this.eventEmitter.removeListener(
+        DefaultAudioManager.STATE_EVENT,
+        subscription.off,
+      );
+    };
   }
 
   addProgressListener(listener: AudioProgressListener): () => void {
-    const subscription = DeviceEventEmitter.addListener(
+    const subscription = this.eventEmitter.addListener(
       DefaultAudioManager.PROGRESS_EVENT,
       listener.onProgressUpdated,
     );
-    return subscription.remove;
+    return () => {
+      this.eventEmitter.removeListener(
+        DefaultAudioManager.PROGRESS_EVENT,
+        subscription.off,
+      );
+    };
   }
 
   async currentState(): Promise<{
@@ -181,8 +198,30 @@ class DefaultAudioManager implements AudioManager {
     };
   }
 
-  onQueueUpdated(queue: AudioQueue): void {
+  async onQueueUpdated(queue: AudioQueue): Promise<void> {
     this.latestQueue = queue;
+    console.log('AMR', {latestQueue: this.latestQueue, sound: this.sound});
+    if (this.latestQueue.length > 0 && this.sound) {
+      console.log('AMR check');
+      const topTrack = this.latestQueue[0];
+      console.log('AMR topTrack', {topTrack});
+      const status = await this.sound.getStatusAsync();
+      console.log('AMR status');
+      if (status.isLoaded) {
+        console.log('AMR loaded - success', {
+          su: status.uri,
+          topTrack: topTrack.url,
+        });
+        const success = status as AVPlaybackStatusSuccess;
+        const shouldPlay = success.isPlaying;
+        if (success.uri !== topTrack.url) {
+          await this.stopPlayback();
+          if (shouldPlay) {
+            await this.togglePlayback();
+          }
+        }
+      }
+    }
   }
 
   async stopPlayback(): Promise<void> {

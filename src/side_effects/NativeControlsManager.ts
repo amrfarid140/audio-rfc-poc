@@ -25,13 +25,13 @@ const musicControlPlaybackStatusMap = {
 export class NativeControlsManager
   implements AudioManagerListener, QueueManagerListener
 {
+  private latestQueue: AudioQueue = [];
+
   constructor(
     private readonly myAudioManager: AudioManager,
     private readonly myQueueManager: QueueManager,
   ) {
-    MusicControl.enableControl(Command.play, true);
-    MusicControl.enableControl(Command.pause, true);
-    MusicControl.enableControl(Command.togglePlayPause, true);
+    this.latestQueue = myQueueManager.currentState();
   }
 
   onStateUpdated(
@@ -39,12 +39,16 @@ export class NativeControlsManager
     speed: PlaybackSpeed,
     status: PlaybackStatus,
   ): void {
+    MusicControl.enableControl(Command.play, true);
+    MusicControl.enableControl(Command.pause, true);
+    MusicControl.enableControl(Command.togglePlayPause, true);
+    let topTrack = this.latestQueue.length > 0 ? this.latestQueue[0] : null;
     const options: RNMusicControlOptions = {
       album: 'The OOP POC',
       artist: 'Reach Who?',
       duration: 22,
       speed,
-      title: 'React is a UI Framework',
+      title: topTrack?.name ?? 'Fail!',
     };
     MusicControl.setNowPlaying(options);
     MusicControl.updatePlayback({state: musicControlPlaybackStatusMap[status]});
@@ -57,8 +61,12 @@ export class NativeControlsManager
     MusicControl.on(Command.togglePlayPause, () => {
       this.myAudioManager.togglePlayback().catch(console.error);
     });
-    MusicControl.on(Command.nextTrack, this.myQueueManager.next);
-    MusicControl.on(Command.previousTrack, this.myQueueManager.previous);
+    MusicControl.on(Command.nextTrack, () => {
+      this.myQueueManager.next();
+    });
+    MusicControl.on(Command.previousTrack, () => {
+      this.myQueueManager.previous();
+    });
     MusicControl.enableControl(
       Command.nextTrack,
       this.myQueueManager.currentState().length !== 0,
@@ -70,6 +78,7 @@ export class NativeControlsManager
     // Update native controls with status and speed
   }
   onQueueUpdated(queue: AudioQueue): void {
+    this.latestQueue = queue;
     MusicControl.enableControl(Command.nextTrack, queue.length !== 0);
     MusicControl.enableControl(Command.previousTrack, queue.length !== 0);
   }

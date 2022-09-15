@@ -18,7 +18,5 @@ export const useAudioProgress = () => {
   useEffect(() => {
     return audioManager.addProgressListener(listener);
   }, [listener]);
-  return {
-    progress: currentAudioProgress,
-  };
+  return currentAudioProgress;
 };

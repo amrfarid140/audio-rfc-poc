@@ -5,7 +5,7 @@ import {QueueManagerListener} from '../QueueManagerListener';
 
 export const useQueueManager = () => {
   const [currentAudioQueue, setAudioQueue] = useState<AudioQueue>(
-    queueManager.currentState,
+    queueManager.currentState(),
   );
   const listener: QueueManagerListener = useMemo(() => {
     return {
@@ -17,7 +17,5 @@ export const useQueueManager = () => {
   useEffect(() => {
     return queueManager.addListener(listener);
   }, [listener]);
-  return {
-    state: currentAudioQueue,
-  };
+  return currentAudioQueue;
 };
