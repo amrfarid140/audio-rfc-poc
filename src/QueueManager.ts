@@ -60,7 +60,7 @@ class DefaultQueueManager implements QueueManager {
   addListener(listener: QueueManagerListener): () => void {
     const sub = this.eventEmitter.addListener(
       DefaultQueueManager.EVENT,
-      listener.onQueueUpdated,
+      queue => listener.onQueueUpdated(queue),
     );
     return () => {
       this.eventEmitter.removeListener(DefaultQueueManager.EVENT, sub.off);

@@ -1,6 +1,6 @@
 import {AudioManagerListener} from '../AudioManagerListener';
 import {QueueManagerListener} from '../QueueManagerListener';
-import {AudioManager} from '../AudioManager';
+import {audioManager, AudioManager} from '../AudioManager';
 import {AVPlayerStatus} from '../types/AVPlayerStatus';
 import {PlaybackSpeed} from '../types/PlaybackSpeed';
 import {PlaybackStatus} from '../types/PlaybackStatus';
@@ -77,9 +77,17 @@ export class NativeControlsManager
     );
     // Update native controls with status and speed
   }
-  onQueueUpdated(queue: AudioQueue): void {
+  async onQueueUpdated(queue: AudioQueue): Promise<void> {
     this.latestQueue = queue;
     MusicControl.enableControl(Command.nextTrack, queue.length !== 0);
     MusicControl.enableControl(Command.previousTrack, queue.length !== 0);
+    const options: RNMusicControlOptions = {
+      album: 'The OOP POC',
+      artist: 'Reach Who?',
+      duration: 22,
+      speed: (await audioManager.currentState()).speed,
+      title: queue.length !== 0 ? queue[0]?.name : 'Fail!',
+    };
+    MusicControl.setNowPlaying(options);
   }
 }

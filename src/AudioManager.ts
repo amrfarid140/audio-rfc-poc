@@ -11,7 +11,13 @@ import {TrackDirection} from './types/TrackDirection';
 import EventEmitter from 'eventemitter2';
 import {AudioQueue} from './types/AudioQueue';
 import {Sound} from 'expo-av/build/Audio/Sound';
-import {AVPlaybackStatus, AVPlaybackStatusSuccess} from 'expo-av';
+import {
+  Audio,
+  AVPlaybackStatus,
+  AVPlaybackStatusSuccess,
+  InterruptionModeAndroid,
+  InterruptionModeIOS,
+} from 'expo-av';
 import isEqual from 'lodash.isequal';
 import {queueManager, QueueManager} from './QueueManager';
 
@@ -41,29 +47,38 @@ class DefaultAudioManager implements AudioManager {
   private static readonly STATE_EVENT = 'STATE';
   private static readonly PROGRESS_EVENT = 'PROGRESS';
 
-  private sound: Sound | null = null;
+  private readonly sound: Sound = new Sound();
   private latestQueue: AudioQueue = [];
   private lastPlaybackStatus: AudioManagerStateEvent | null = null;
   private eventEmitter = new EventEmitter();
 
   constructor(queue: QueueManager) {
     this.latestQueue = queue.currentState();
+    Audio.setAudioModeAsync({
+      allowsRecordingIOS: false,
+      interruptionModeAndroid: InterruptionModeAndroid.DoNotMix,
+      interruptionModeIOS: InterruptionModeIOS.DoNotMix,
+      playsInSilentModeIOS: true, // Get the app to ignore the mute switch on iOS
+      playThroughEarpieceAndroid: false,
+      shouldDuckAndroid: false, // Audio from other apps will pause your audio playback
+      staysActiveInBackground: true,
+    });
   }
 
   async seekTo(positionMs: number): Promise<void> {
-    if (this.sound) {
+    if (this.sound._loaded) {
       await this.sound.setPositionAsync(positionMs);
     }
   }
 
   async setPlaybackSpeed(speed: number): Promise<void> {
-    if (this.sound) {
+    if (this.sound._loaded) {
       await this.sound.setRateAsync(speed, true);
     }
   }
 
   async skipSeekTime(direction: TrackDirection): Promise<void> {
-    if (this.sound) {
+    if (this.sound._loaded) {
       const status = await this.sound.getStatusAsync();
       if (status.isLoaded) {
         const successStatus = status as AVPlaybackStatusSuccess;
@@ -77,7 +92,7 @@ class DefaultAudioManager implements AudioManager {
   }
 
   async togglePlayback(): Promise<void> {
-    if (this.sound) {
+    if (this.sound._loaded) {
       const status: AVPlaybackStatus = await this.sound.getStatusAsync();
       if (status.isLoaded) {
         let successStatus = status as AVPlaybackStatusSuccess;
@@ -90,42 +105,37 @@ class DefaultAudioManager implements AudioManager {
       }
     } else {
       const track = this.latestQueue[0];
-      const result = await Sound.createAsync(
-        {uri: track.url},
-        {shouldPlay: true},
-        (status: AVPlaybackStatus) => {
-          if (status.isLoaded) {
-            const success = status as AVPlaybackStatusSuccess;
-            const playbackStatus: AudioManagerStateEvent = {
-              playerStatus: {
-                isBuffering: success.isBuffering,
-                isPlaying: success.isPlaying,
-                isLoading: !success.isLoaded,
-              },
-              duration: success.durationMillis ?? 0,
-              status: success.isPlaying
-                ? PlaybackStatus.Play
-                : PlaybackStatus.Pause,
-              speed: success.rate,
-            };
-            if (!isEqual(this.lastPlaybackStatus, playbackStatus)) {
-              this.lastPlaybackStatus = playbackStatus;
-              this.eventEmitter.emit(
-                DefaultAudioManager.STATE_EVENT,
-                playbackStatus,
-              );
-            }
-            this.eventEmitter.emit(DefaultAudioManager.PROGRESS_EVENT, <
-              AVPlayerProgress
-            >{
-              durationMillis: success.durationMillis,
-              positionMillis: success.positionMillis,
-            });
+      await this.sound.loadAsync({uri: track.url}, {shouldPlay: true});
+      this.sound.setOnPlaybackStatusUpdate((status: AVPlaybackStatus) => {
+        if (status.isLoaded) {
+          const success = status as AVPlaybackStatusSuccess;
+          const playbackStatus: AudioManagerStateEvent = {
+            playerStatus: {
+              isBuffering: success.isBuffering,
+              isPlaying: success.isPlaying,
+              isLoading: !success.isLoaded,
+            },
+            duration: success.durationMillis ?? 0,
+            status: success.isPlaying
+              ? PlaybackStatus.Play
+              : PlaybackStatus.Pause,
+            speed: success.rate,
+          };
+          if (!isEqual(this.lastPlaybackStatus, playbackStatus)) {
+            this.lastPlaybackStatus = playbackStatus;
+            this.eventEmitter.emit(
+              DefaultAudioManager.STATE_EVENT,
+              playbackStatus,
+            );
           }
-        },
-      );
-      this.sound = result.sound;
-      console.log('AAAA', {s: this.sound});
+          this.eventEmitter.emit(DefaultAudioManager.PROGRESS_EVENT, <
+            AVPlayerProgress
+          >{
+            durationMillis: success.durationMillis,
+            positionMillis: success.positionMillis,
+          });
+        }
+      });
     }
   }
 
@@ -146,7 +156,7 @@ class DefaultAudioManager implements AudioManager {
   addProgressListener(listener: AudioProgressListener): () => void {
     const subscription = this.eventEmitter.addListener(
       DefaultAudioManager.PROGRESS_EVENT,
-      listener.onProgressUpdated,
+      progress => listener.onProgressUpdated(progress),
     );
     return () => {
       this.eventEmitter.removeListener(
@@ -162,7 +172,7 @@ class DefaultAudioManager implements AudioManager {
     status: PlaybackStatus;
     progress: AVPlayerProgress;
   }> {
-    if (this.sound) {
+    if (this.sound._loaded) {
       const status = await this.sound.getStatusAsync();
       if (status.isLoaded) {
         const success = status as AVPlaybackStatusSuccess;
@@ -225,9 +235,8 @@ class DefaultAudioManager implements AudioManager {
   }
 
   async stopPlayback(): Promise<void> {
-    if (this.sound) {
+    if (this.sound._loaded) {
       await this.sound.stopAsync();
-      this.sound = null;
     }
     return Promise.resolve();
   }
